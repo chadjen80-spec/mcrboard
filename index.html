@@ -1,0 +1,721 @@
+<meta charset="utf-8">
+<title>RateBoard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --bg:#EDF0F3; --surface:#FFFFFF; --surface2:#F5F7F9; --line:#D7DDE3; --line2:#E7EBEF;
+  --ink:#151B22; --ink2:#4B5563; --ink3:#7C8794;
+  --accent:#0E6E78; --accent-ink:#FFFFFF; --accent-soft:#DDF0F1;
+  --money:#B45309; --money-soft:#FBEBD5;
+  --good:#1D7A46; --good-soft:#DDF3E4; --warn:#B7791F; --warn-soft:#FBF0D3; --bad:#B42323; --bad-soft:#FADADA;
+  --shadow:0 1px 2px rgba(20,27,34,.06),0 8px 24px rgba(20,27,34,.06);
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1418; --surface:#171D23; --surface2:#1E262D; --line:#2C363F; --line2:#26303A;
+    --ink:#E9EEF2; --ink2:#AEB9C4; --ink3:#7E8B98;
+    --accent:#3FB6BF; --accent-ink:#0B1416; --accent-soft:#12343A;
+    --money:#F0A448; --money-soft:#3A2A14;
+    --good:#4CC57C; --good-soft:#153724; --warn:#E5B34C; --warn-soft:#3A2F12; --bad:#F26D6D; --bad-soft:#3F1B1B;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1418; --surface:#171D23; --surface2:#1E262D; --line:#2C363F; --line2:#26303A;
+  --ink:#E9EEF2; --ink2:#AEB9C4; --ink3:#7E8B98;
+  --accent:#3FB6BF; --accent-ink:#0B1416; --accent-soft:#12343A;
+  --money:#F0A448; --money-soft:#3A2A14;
+  --good:#4CC57C; --good-soft:#153724; --warn:#E5B34C; --warn-soft:#3A2F12; --bad:#F26D6D; --bad-soft:#3F1B1B;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Segoe UI","Leelawadee UI","Noto Sans Thai","Sarabun",system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
+p{margin:0}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 20px 80px}
+/* header */
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:8px 0 20px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.brand{display:flex;flex-direction:column;gap:4px}
+.brand h1{font-size:26px;letter-spacing:-.01em}
+.brand h1 span{color:var(--accent)}
+.brand p{color:var(--ink2);max-width:60ch}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap}
+/* buttons */
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s,border-color .15s}
+.btn:hover{border-color:var(--accent);background:var(--surface2)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.chip:focus-visible,.cat:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.small{padding:4px 10px;font-size:13px;border-radius:6px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.ghost:hover{background:var(--surface2);border-color:var(--line)}
+.btn.danger:hover{border-color:var(--bad);color:var(--bad)}
+/* layout */
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:22px;align-items:start}
+@media (max-width:980px){.layout{grid-template-columns:1fr}.summary{position:static!important}}
+.stack{display:flex;flex-direction:column;gap:18px}
+section.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line2);flex-wrap:wrap}
+.card-h h2{font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px}
+.step{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:700}
+.card-h .hint{color:var(--ink3);font-size:13px}
+.card-b{padding:16px 18px}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:640px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:12.5px;color:var(--ink2);font-weight:600;letter-spacing:.01em}
+.field .sub{font-size:12px;color:var(--ink3);font-weight:400}
+.in{position:relative;display:flex;align-items:center}
+.in input,.in select,textarea.ta{width:100%;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.in input:hover,.in select:hover{border-color:var(--ink3)}
+.in .unit{position:absolute;right:10px;color:var(--ink3);font-size:12.5px;pointer-events:none}
+.in input.has-unit{padding-right:52px}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button{opacity:.5}
+/* chips */
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+/* rate result strip */
+.strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line2);border:1px solid var(--line2);border-radius:8px;overflow:hidden;margin-top:14px}
+@media (max-width:640px){.strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface2);padding:10px 12px}
+.stat .k{font-size:12px;color:var(--ink3)}
+.stat .v{font-size:18px;font-weight:700}
+.stat.hi{background:var(--accent-soft)}
+.stat.hi .v{color:var(--accent)}
+/* catalog */
+.cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.cat{border:1px solid transparent;background:transparent;border-radius:6px;padding:5px 10px;font-size:13.5px;cursor:pointer;color:var(--ink2)}
+.cat:hover{background:var(--surface2)}
+.cat.on{background:var(--ink);color:var(--surface);font-weight:600}
+.catalog{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.tile{text-align:left;border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:3px;transition:border-color .15s,transform .1s}
+.tile:hover{border-color:var(--accent);transform:translateY(-1px)}
+.tile .n{font-weight:600;font-size:14px}
+.tile .m{font-size:12px;color:var(--ink3);display:flex;justify-content:space-between;gap:8px}
+.tile .m b{color:var(--money);font-weight:600}
+/* items table */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;color:var(--ink3);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line2);white-space:nowrap}
+td{padding:8px 6px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td .in input{padding:5px 8px;border-radius:6px}
+.tbl-wrap{overflow-x:auto;margin:0 -18px;padding:0 18px}
+.right{text-align:right}
+.muted{color:var(--ink3)}
+.item-name{font-weight:600}
+.item-sub{font-size:12px;color:var(--ink3)}
+.empty{padding:20px;text-align:center;color:var(--ink3);border:1px dashed var(--line);border-radius:8px}
+.mkt-pill{display:inline-block;font-size:11.5px;padding:2px 7px;border-radius:999px;background:var(--surface2);border:1px solid var(--line);white-space:nowrap}
+.mkt-pill.lo{background:var(--bad-soft);border-color:transparent;color:var(--bad)}
+.mkt-pill.ok{background:var(--good-soft);border-color:transparent;color:var(--good)}
+.mkt-pill.hi{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+/* toggle rows */
+.opt{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line2)}
+.opt:last-child{border-bottom:0}
+.opt .l{display:flex;flex-direction:column;gap:2px}
+.opt .l b{font-weight:600;font-size:14px}
+.opt .l span{font-size:12.5px;color:var(--ink3)}
+.sw{position:relative;width:40px;height:22px;flex:none}
+.sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.sw i{position:absolute;inset:0;background:var(--line);border-radius:999px;transition:background .15s}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.sw input:checked+i{background:var(--accent)}
+.sw input:checked+i::after{transform:translateX(18px)}
+.sw input:focus-visible+i{outline:2px solid var(--accent);outline-offset:2px}
+/* summary */
+.summary{position:sticky;top:16px;display:flex;flex-direction:column;gap:14px}
+.total-card{background:var(--ink);color:var(--surface);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow)}
+:root[data-theme="dark"] .total-card{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .total-card{background:var(--surface);color:var(--ink);border:1px solid var(--line)}}
+.total-card .k{font-size:12.5px;opacity:.75;letter-spacing:.04em;text-transform:uppercase}
+.total-card .big{font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:4px 0 2px}
+.total-card .big small{font-size:16px;font-weight:600;opacity:.7;margin-left:4px}
+.total-card .sub{font-size:13px;opacity:.75}
+.lines{display:flex;flex-direction:column}
+.line{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line2);font-size:14px}
+.line:last-child{border-bottom:0}
+.line .k{color:var(--ink2)}
+.line.tot{font-weight:700;border-top:1px solid var(--line);margin-top:4px}
+.line.neg .v{color:var(--bad)}
+.line.pos .v{color:var(--good)}
+.gauge{margin-top:8px}
+.gauge .bar{position:relative;height:10px;border-radius:999px;background:linear-gradient(90deg,var(--bad-soft),var(--good-soft) 35%,var(--good-soft) 65%,var(--warn-soft));border:1px solid var(--line)}
+.gauge .mk{position:absolute;top:-5px;width:4px;height:18px;border-radius:2px;background:var(--accent);transform:translateX(-50%);transition:left .3s}
+.gauge .lbl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink3);margin-top:4px}
+.verdict{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:8px;font-size:13.5px;margin-top:10px}
+.verdict.ok{background:var(--good-soft);color:var(--good)}
+.verdict.lo{background:var(--bad-soft);color:var(--bad)}
+.verdict.hi{background:var(--warn-soft);color:var(--warn)}
+.verdict.na{background:var(--surface2);color:var(--ink3)}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.kpi{background:var(--surface2);border-radius:8px;padding:8px 10px}
+.kpi .k{font-size:11.5px;color:var(--ink3)}
+.kpi .v{font-weight:700;font-size:16px}
+.note{font-size:12.5px;color:var(--ink3);line-height:1.5}
+.warnbox{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:8px 12px;font-size:13px}
+/* ref table */
+details summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:"▾";color:var(--ink3);transition:transform .15s}
+details[open] summary::after{transform:rotate(180deg)}
+.src{font-size:12.5px;color:var(--ink3);margin-top:10px}
+.src a{color:var(--accent)}
+/* terms */
+.checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;margin-bottom:12px}
+@media (max-width:640px){.checks{grid-template-columns:1fr}}
+.ck{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;cursor:pointer}
+.ck input{margin-top:4px;accent-color:var(--accent)}
+textarea.ta{min-height:260px;line-height:1.6;font-size:13.5px;resize:vertical}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* print quote */
+#quote{display:none}
+@media print{
+  body{background:#fff;color:#000}
+  .app{display:none!important}
+  #quote{display:block;font-size:12.5pt;color:#000;max-width:none;padding:0}
+  #quote table{font-size:12pt}
+  #quote td,#quote th{border-bottom:1px solid #ccc;padding:6px}
+  #quote h1{font-size:22pt}
+  #quote .q-head{display:flex;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:16px}
+  #quote .q-terms{white-space:pre-wrap;font-size:11pt;margin-top:18px}
+  #quote .q-tot td{font-weight:700}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app wrap">
+<header class="top">
+  <div class="brand">
+    <h1>Rate<span>Board</span> — คิดราคางานกราฟิก / Motion / โลโก้ทีม</h1>
+    <p>ตั้งเรทจากรายได้ที่อยากได้จริง → เลือกงาน → ใส่เงื่อนไข ต้นทุน ภาษี → เทียบกับตลาด Fastwork → ได้ราคาและเงื่อนไขพร้อมส่งลูกค้า</p>
+  </div>
+  <div class="top-actions">
+    <button class="btn" id="btnReset" title="ล้างค่าที่กรอกทั้งหมด">รีเซ็ต</button>
+    <button class="btn primary" id="btnPrint">พิมพ์ / บันทึกใบเสนอราคา PDF</button>
+  </div>
+</header>
+
+<div class="layout">
+<div class="stack">
+
+<!-- 1. RATE -->
+<section class="card" id="secRate">
+  <div class="card-h"><h2><span class="step">1</span>ตั้งเรทของเรา</h2><span class="hint">คำนวณจาก "เงินที่ต้องหาให้ได้ต่อเดือน ÷ ชั่วโมงที่เก็บเงินได้จริง"</span></div>
+  <div class="card-b">
+    <div class="chips" style="margin-bottom:14px">
+      <span class="muted" style="font-size:13px;align-self:center">พรีเซ็ต:</span>
+      <button class="chip" data-preset="junior">ฟรีแลนซ์เริ่มต้น</button>
+      <button class="chip" data-preset="mid">มืออาชีพ 2–4 ปี</button>
+      <button class="chip" data-preset="senior">ซีเนียร์ / สตูดิโอเล็ก</button>
+    </div>
+    <div class="grid g3">
+      <div class="field"><label>รายได้ที่อยากได้ต่อเดือน <span class="sub">(เงินเข้ากระเป๋าหลังหักต้นทุน)</span></label><div class="in"><input class="has-unit" type="number" id="income" min="0" step="1000"><span class="unit">บาท</span></div></div>
+      <div class="field"><label>ต้นทุนคงที่ต่อเดือน <span class="sub">(ค่าซอฟต์แวร์ เน็ต ไฟ ค่าเช่า ผ่อนคอม ฯลฯ)</span></label><div class="in"><input class="has-unit" type="number" id="fixed" min="0" step="500"><span class="unit">บาท</span></div></div>
+      <div class="field"><label>วันทำงานต่อเดือน</label><div class="in"><input class="has-unit" type="number" id="days" min="1" max="31" step="1"><span class="unit">วัน</span></div></div>
+      <div class="field"><label>ชั่วโมงทำงานต่อวัน</label><div class="in"><input class="has-unit" type="number" id="hoursDay" min="1" max="16" step="0.5"><span class="unit">ชม.</span></div></div>
+      <div class="field"><label>ชั่วโมงที่เก็บเงินได้จริง <span class="sub">(ตัดเวลาหางาน คุยลูกค้า แก้งานฟรี ทำบัญชี)</span></label><div class="in"><input class="has-unit" type="number" id="billable" min="10" max="100" step="5"><span class="unit">%</span></div></div>
+      <div class="field"><label>กำไรส่วนเพิ่ม <span class="sub">(เผื่อเดือนที่งานน้อย + เงินเก็บ + ภาษีเงินได้)</span></label><div class="in"><input class="has-unit" type="number" id="profit" min="0" max="200" step="5"><span class="unit">%</span></div></div>
+    </div>
+    <div class="strip">
+      <div class="stat"><div class="k">ชั่วโมงทำงาน/เดือน</div><div class="v num" id="rHours">—</div></div>
+      <div class="stat"><div class="k">ชั่วโมงเก็บเงินได้/เดือน</div><div class="v num" id="rBillable">—</div></div>
+      <div class="stat"><div class="k">เรทฐาน (ต้นทุน)/ชม.</div><div class="v num" id="rBase">—</div></div>
+      <div class="stat hi"><div class="k">เรทที่ใช้คิดงาน/ชม.</div><div class="v num" id="rRate">—</div></div>
+      <div class="stat"><div class="k">เรทต่อวัน (Day rate)</div><div class="v num" id="rDay">—</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. ITEMS -->
+<section class="card" id="secItems">
+  <div class="card-h"><h2><span class="step">2</span>เลือกงานในโปรเจกต์</h2><span class="hint">คลิกเพื่อเพิ่ม · ปรับชั่วโมง/จำนวนได้ · ราคาต่อชิ้น = ชั่วโมง × เรท</span></div>
+  <div class="card-b">
+    <div class="cats" id="cats"></div>
+    <div class="catalog" id="catalog"></div>
+    <div style="height:14px"></div>
+    <div id="itemsWrap"></div>
+  </div>
+</section>
+
+<!-- 3. CONDITIONS -->
+<section class="card" id="secCond">
+  <div class="card-h"><h2><span class="step">3</span>เงื่อนไขงาน</h2><span class="hint">ตัวคูณจะใช้กับค่าแรงรวมของโปรเจกต์</span></div>
+  <div class="card-b">
+    <div class="grid g2">
+      <div class="field"><label>ความซับซ้อนของงาน</label><div class="in"><select id="complexity">
+        <option value="0.8">ง่าย — มีเทมเพลต/แบรนด์กำหนดมาแล้ว (×0.8)</option>
+        <option value="1" selected>ปานกลาง — ออกแบบใหม่ตามบรีฟ (×1.0)</option>
+        <option value="1.3">ซับซ้อน — วาดใหม่/หลายเวอร์ชัน/แอนิเมชันละเอียด (×1.3)</option>
+        <option value="1.6">ซับซ้อนมาก — คอนเซ็ปต์เต็มรูปแบบ, งานพรีเมียม (×1.6)</option>
+      </select></div></div>
+      <div class="field"><label>ความเร่งด่วน</label><div class="in"><select id="rush">
+        <option value="0" selected>ปกติ — ตามระยะเวลาที่ประเมิน (+0%)</option>
+        <option value="0.3">เร่ง — เหลือเวลาครึ่งเดียว (+30%)</option>
+        <option value="0.5">ด่วนมาก — ภายใน 24–48 ชม. (+50%)</option>
+        <option value="1">ด่วนข้ามคืน / ทำงานวันหยุด (+100%)</option>
+      </select></div></div>
+      <div class="field"><label>สิทธิ์การใช้งาน</label><div class="in"><select id="rights">
+        <option value="0">ส่วนตัว / ไม่แสวงกำไร (+0%)</option>
+        <option value="0.15" selected>ธุรกิจเล็ก / ทีมสมัครเล่น (+15%)</option>
+        <option value="0.4">บริษัท / แบรนด์ / ทีมอาชีพ (+40%)</option>
+        <option value="1">ซื้อขาดลิขสิทธิ์ (Exclusive buyout) (+100%)</option>
+      </select></div></div>
+      <div class="field"><label>ประเภทลูกค้า <span class="sub">(มีผลกับภาษีและถ้อยคำในใบเสนอราคา)</span></label><div class="in"><select id="client">
+        <option value="person" selected>บุคคลทั่วไป / ทีมเกม</option>
+        <option value="sme">ร้านค้า / SME (บุคคลธรรมดา)</option>
+        <option value="company">บริษัท / นิติบุคคล</option>
+        <option value="agency">เอเจนซี่ / ลูกค้าต่างประเทศ</option>
+      </select></div></div>
+      <div class="field"><label>รอบแก้ไขที่รวมในราคา</label><div class="in"><input class="has-unit" type="number" id="revisions" min="0" max="10" step="1" value="2"><span class="unit">รอบ</span></div></div>
+      <div class="field"><label>ค่าแก้ไขเพิ่มต่อรอบ <span class="sub">(% ของค่างานชิ้นนั้น เมื่อเกินรอบที่กำหนด)</span></label><div class="in"><input class="has-unit" type="number" id="revPct" min="0" max="100" step="5" value="15"><span class="unit">%</span></div></div>
+      <div class="field"><label>จำนวนแบบร่างให้เลือก (โลโก้/คอนเซ็ปต์)</label><div class="in"><select id="concepts">
+        <option value="0" selected>1 แบบ (+0%)</option>
+        <option value="0.15">2 แบบ (+15%)</option>
+        <option value="0.3">3 แบบ (+30%)</option>
+      </select></div></div>
+    </div>
+    <div style="height:8px"></div>
+    <div class="opt"><div class="l"><b>ส่งไฟล์ต้นฉบับ (.ai / .psd / .aep / .prproj)</b><span>ปกติส่งเฉพาะไฟล์ใช้งาน (PNG/JPG/MP4) — ส่งต้นฉบับคิดเพิ่ม +20%</span></div><label class="sw"><input type="checkbox" id="source"><i></i></label></div>
+    <div class="opt"><div class="l"><b>ให้เครดิตผลงาน / ใส่พอร์ตได้</b><span>ถ้าลูกค้าไม่อนุญาตให้เผยแพร่ผลงาน คิดเพิ่ม +10%</span></div><label class="sw"><input type="checkbox" id="credit" checked><i></i></label></div>
+  </div>
+</section>
+
+<!-- 4. DIRECT COSTS -->
+<section class="card" id="secDirect">
+  <div class="card-h"><h2><span class="step">4</span>ต้นทุนตรงของโปรเจกต์</h2><span class="hint">ของที่ต้องซื้อ/จ้างเพื่อโปรเจกต์นี้โดยเฉพาะ</span></div>
+  <div class="card-b">
+    <div id="directRows"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px">
+      <button class="btn small" id="addDirect">+ เพิ่มรายการ</button>
+      <span class="muted" style="font-size:13px">ตัวอย่างเร็ว:</span>
+      <button class="chip" data-quick="ภาพสต็อก / ฟอนต์ลิขสิทธิ์|500">ภาพสต็อก/ฟอนต์</button>
+      <button class="chip" data-quick="เพลง/SFX ลิขสิทธิ์|350">เพลง/SFX</button>
+      <button class="chip" data-quick="จ้างพากย์เสียง|1500">พากย์เสียง</button>
+      <button class="chip" data-quick="ค่า Render/Cloud/Storage|300">Render/Storage</button>
+      <button class="chip" data-quick="จ้างช่วง (Outsource)|3000">จ้างช่วง</button>
+    </div>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="field"><label>บวกค่าจัดการต้นทุนตรง <span class="sub">(ค่าเสียเวลาหา/จ่ายแทน/รับความเสี่ยง)</span></label><div class="in"><input class="has-unit" type="number" id="directMarkup" min="0" max="100" step="5" value="10"><span class="unit">%</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. TAX -->
+<section class="card" id="secTax">
+  <div class="card-h"><h2><span class="step">5</span>ภาษี & ค่าธรรมเนียม</h2><span class="hint">ให้ราคาที่เสนอเป็นราคาที่ "ได้รับจริง" ไม่ใช่ราคาก่อนโดนหัก</span></div>
+  <div class="card-b">
+    <div class="opt"><div class="l"><b>ลูกค้าหักภาษี ณ ที่จ่าย 3%</b><span>บริษัท/นิติบุคคลจ่ายค่าจ้างฟรีแลนซ์ (บุคคลธรรมดา) ต้องหัก 3% และออกหนังสือรับรอง (50 ทวิ) — ใช้เป็นเครดิตภาษีตอนยื่น ภ.ง.ด.90 ได้</span></div><label class="sw"><input type="checkbox" id="wht"><i></i></label></div>
+    <div class="opt" id="grossRow"><div class="l"><b>ปรับราคาขึ้นชดเชย 3% (Gross-up)</b><span>ตั้งราคาให้หลังหักแล้วยังได้รับเท่าที่ตั้งใจ — ระบุในใบเสนอราคาว่า "ราคานี้ยังไม่รวมภาษีหัก ณ ที่จ่าย"</span></div><label class="sw"><input type="checkbox" id="grossUp" checked><i></i></label></div>
+    <div class="opt"><div class="l"><b>จดทะเบียน VAT — บวก 7%</b><span>เฉพาะผู้ที่จด VAT แล้ว (รายได้เกิน 1.8 ล้าน/ปี หรือสมัครใจ) ถ้าไม่ได้จด ห้ามเก็บ VAT</span></div><label class="sw"><input type="checkbox" id="vat"><i></i></label></div>
+    <div class="opt"><div class="l"><b>ขายผ่านแพลตฟอร์ม (Fastwork ฯลฯ)</b><span>ค่าธรรมเนียมหักจากฟรีแลนซ์ — ราคาที่ตั้งบนแพลตฟอร์มต้องบวกส่วนนี้กลับ</span></div><label class="sw"><input type="checkbox" id="platform"><i></i></label></div>
+    <div class="grid g3" style="margin-top:12px">
+      <div class="field"><label>ค่าธรรมเนียมแพลตฟอร์ม</label><div class="in"><input class="has-unit" type="number" id="platformFee" min="0" max="50" step="1" value="17"><span class="unit">%</span></div></div>
+      <div class="field"><label>ปัดราคาสุดท้ายเป็นหลัก</label><div class="in"><select id="roundStep"><option value="1">ไม่ปัด</option><option value="10">10 บาท</option><option value="50">50 บาท</option><option value="100" selected>100 บาท</option><option value="500">500 บาท</option></select></div></div>
+      <div class="field"><label>มัดจำก่อนเริ่มงาน</label><div class="in"><input class="has-unit" type="number" id="deposit" min="0" max="100" step="10" value="50"><span class="unit">%</span></div></div>
+    </div>
+    <p class="note" style="margin-top:12px">หมายเหตุ: ภาษีเงินได้บุคคลธรรมดาปลายปี (ภ.ง.ด.90/94) ไม่ได้รวมในราคานี้ — ตัวเลข "กำไรส่วนเพิ่ม" ในข้อ 1 ควรเผื่อไว้ ฟรีแลนซ์งานออกแบบมักหักค่าใช้จ่ายเหมา 60% (เงินได้ 40(8) รับจ้างทั่วไป) หรือตามจริง ควรปรึกษาผู้ทำบัญชี</p>
+  </div>
+</section>
+
+<!-- 6. MARKET REF -->
+<section class="card" id="secRef">
+  <details>
+    <summary class="card-h"><h2><span class="step">6</span>เรทอ้างอิงตลาด (Fastwork)</h2><span class="hint">คลิกดูตาราง</span></summary>
+    <div class="card-b">
+      <div class="tbl-wrap"><table id="refTable"></table></div>
+      <p class="src">ช่วงราคาประมาณจากรายการจริงบน Fastwork (ส.ค. 2026): แบนเนอร์โซเชียล 1 ชิ้นเริ่ม ฿600 · อัลบั้ม 4 ชิ้น ฿2,260 · ชุดโฆษณา 10 ชิ้น ฿4,800 (แก้ไข 3 รอบ ส่ง 2–4 วัน) · โลโก้เริ่ม ฿1,500 · Motion graphic เริ่ม ฿3,000/10 วินาที (ไม่รวมสตอรี่บอร์ด เสียง พากย์ — เร่งงาน &lt;7 วันคิดเพิ่ม)
+      แหล่ง: <a href="https://fastwork.co/social-media-banner" target="_blank" rel="noopener">fastwork.co/social-media-banner</a> · <a href="https://fastwork.co/logo-design" target="_blank" rel="noopener">fastwork.co/logo-design</a> · <a href="https://fastwork.co/motion-graphics" target="_blank" rel="noopener">fastwork.co/motion-graphics</a><br>
+      "ต่ำ" = ราคาโปรโมชัน/มือใหม่ · "กลาง" = ราคาที่พบบ่อย · "สูง" = ฟรีแลนซ์มีรีวิวเยอะ/พอร์ตแข็ง ตัวเลขนี้เป็นเข็มทิศ ไม่ใช่เพดาน — ควรอัปเดตทุก 3–6 เดือน</p>
+    </div>
+  </details>
+</section>
+
+<!-- 7. TERMS -->
+<section class="card" id="secTerms">
+  <div class="card-h"><h2><span class="step">7</span>เงื่อนไขที่ควรเขียนในใบเสนอราคา</h2><button class="btn small" id="copyTerms">คัดลอกข้อความ</button></div>
+  <div class="card-b">
+    <div class="checks" id="termChecks"></div>
+    <textarea class="ta" id="termsText" readonly></textarea>
+    <p class="note" style="margin-top:8px">ข้อความสร้างจากค่าที่ตั้งด้านบนโดยอัตโนมัติ — แก้คำได้ตามสไตล์ของคุณก่อนส่ง</p>
+  </div>
+</section>
+
+</div><!-- /stack -->
+
+<!-- SUMMARY -->
+<aside class="summary">
+  <div class="total-card">
+    <div class="k">ราคาที่ควรเสนอลูกค้า</div>
+    <div class="big num"><span id="sTotal">0</span><small>บาท</small></div>
+    <div class="sub" id="sTotalSub">รวม VAT / ยังไม่รวมหัก ณ ที่จ่าย</div>
+  </div>
+  <section class="card"><div class="card-b">
+    <div class="lines" id="sLines"></div>
+  </div></section>
+  <section class="card"><div class="card-b">
+    <div style="font-weight:700;font-size:14px">เทียบกับตลาด Fastwork</div>
+    <div class="gauge">
+      <div class="bar"><div class="mk" id="gMk" style="left:50%"></div></div>
+      <div class="lbl"><span id="gLo">—</span><span id="gMid">—</span><span id="gHi">—</span></div>
+    </div>
+    <div class="verdict na" id="verdict">เพิ่มงานในโปรเจกต์เพื่อเทียบราคา</div>
+  </section>
+  <section class="card"><div class="card-b">
+    <div class="kpis">
+      <div class="kpi"><div class="k">ชั่วโมงงานรวม</div><div class="v num" id="kHours">0</div></div>
+      <div class="kpi"><div class="k">ระยะเวลาส่งงานแนะนำ</div><div class="v num" id="kDays">—</div></div>
+      <div class="kpi"><div class="k">เรทจริงที่ได้/ชม. (หลังหักทุกอย่าง)</div><div class="v num" id="kEff">—</div></div>
+      <div class="kpi"><div class="k">มัดจำเมื่อเริ่มงาน</div><div class="v num" id="kDep">—</div></div>
+    </div>
+    <div id="warns" style="display:flex;flex-direction:column;gap:6px;margin-top:10px"></div>
+  </div></section>
+</aside>
+</div><!-- /layout -->
+</div><!-- /app -->
+
+<!-- PRINT QUOTE -->
+<div id="quote"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const fmt=n=>new Intl.NumberFormat('th-TH',{maximumFractionDigits:0}).format(Math.round(n||0));
+const fmt1=n=>new Intl.NumberFormat('th-TH',{maximumFractionDigits:1}).format(n||0);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+
+// ---------- Catalog: [id, category, name, note, baseHours, mktLow, mktMid, mktHigh, unit]
+const CATS={graphic:'กราฟิก / โซเชียล',motion:'Motion / วิดีโอ',logo:'โลโก้ / ทีม / แบรนด์'};
+const CATALOG=[
+ ['banner1','graphic','แบนเนอร์โซเชียล 1 ชิ้น','FB/IG/LINE โพสต์หรือโฆษณา 1 ภาพ',2,300,600,1500,'ชิ้น'],
+ ['album4','graphic','ชุดคอนเทนต์ 4 ชิ้น','อัลบั้ม/ซีรีส์โพสต์ธีมเดียวกัน',6,1500,2260,4000,'ชุด'],
+ ['ads10','graphic','ชุดโฆษณา 10 ชิ้น','หลายแพลตฟอร์ม/หลายไซส์',14,3500,4800,9000,'ชุด'],
+ ['cover','graphic','ปกเพจ / แบนเนอร์เว็บ','Cover FB, YouTube banner, hero web',3,500,900,2000,'ชิ้น'],
+ ['thumb','graphic','Thumbnail YouTube / ปกคลิป','ต้องหยุดนิ้ว อ่านง่ายบนมือถือ',1,150,300,800,'ชิ้น'],
+ ['poster','graphic','โปสเตอร์ / ใบปลิว A4','งานพิมพ์ ต้องเผื่อตัดตก CMYK',4,500,1200,3000,'ชิ้น'],
+ ['info','graphic','อินโฟกราฟิก 1 หน้า','ย่อยข้อมูล + ไอคอน + เลย์เอาต์',6,1000,2500,6000,'ชิ้น'],
+ ['deck','graphic','พรีเซนเทชัน 10 สไลด์','เทมเพลต + จัดเนื้อหาให้',8,1500,3000,8000,'ชุด'],
+ ['menu','graphic','เมนู / ป้ายร้าน / โบรชัวร์','งานพิมพ์หลายหน้า',6,1000,2500,6000,'ชิ้น'],
+ ['motion10','motion','Motion graphic 10 วินาที','ไม่รวมสตอรี่บอร์ด เสียง พากย์',8,1500,3000,6000,'10 วิ'],
+ ['logoanim','motion','โลโก้แอนิเมชัน / Intro 5–10 วิ','Sting เปิดคลิป/สตรีม',6,1000,2500,6000,'ชิ้น'],
+ ['shortvid','motion','ตัดต่อคลิปสั้น ≤ 1 นาที','TikTok / Reels / Shorts พร้อมซับ',3,500,1000,2500,'คลิป'],
+ ['longvid','motion','ตัดต่อวิดีโอ 5–10 นาที','YouTube / รีวิว / Vlog',8,1500,3000,8000,'คลิป'],
+ ['montage','motion','Esport highlight / Montage 1–2 นาที','ซิงก์บีต + เอฟเฟกต์ + ชื่อผู้เล่น',8,1500,3000,6000,'คลิป'],
+ ['overlay','motion','ชุด Stream overlay (แอนิเมชัน)','Starting soon / BRB / Alert / Webcam frame',10,1500,3500,8000,'ชุด'],
+ ['lowerthird','motion','Lower third / Title pack','ชุดกราฟิกชื่อ-หัวข้อ ใช้ซ้ำได้',4,800,1500,3500,'ชุด'],
+ ['teamlogo','logo','โลโก้ทีม Esport (มาสคอต)','ตัวละคร + ตัวอักษร + สี, ไฟล์เวกเตอร์',12,2000,4000,12000,'ชิ้น'],
+ ['brandlogo','logo','โลโก้แบรนด์ / ร้าน (Wordmark/Simple)','ใช้ได้ทั้งพิมพ์และดิจิทัล',8,1500,3000,8000,'ชิ้น'],
+ ['mascot','logo','มาสคอต / ตัวละคร Illustration','ท่าเดียว ลงสีเต็ม',14,2000,5000,12000,'ตัว'],
+ ['ci','logo','ชุดอัตลักษณ์แบรนด์ (Mini CI)','โลโก้ + สี + ฟอนต์ + Guideline ย่อ',30,5000,12000,30000,'ชุด'],
+ ['jersey','logo','ออกแบบเสื้อทีม / Jersey','ลายเสื้อหน้า-หลัง + mockup',8,1500,3000,7000,'แบบ'],
+ ['emote','logo','Emote / Sub badge (ชุด 5)','สำหรับ Twitch/YouTube/Discord',5,800,1500,4000,'ชุด'],
+];
+const CAT_MAP=Object.fromEntries(CATALOG.map(c=>[c[0],{id:c[0],cat:c[1],name:c[2],note:c[3],hours:c[4],lo:c[5],mid:c[6],hi:c[7],unit:c[8]}]));
+
+const PRESETS={
+ junior:{income:25000,fixed:5000,days:22,hoursDay:8,billable:60,profit:20},
+ mid:{income:45000,fixed:8000,days:22,hoursDay:8,billable:60,profit:25},
+ senior:{income:80000,fixed:12000,days:22,hoursDay:8,billable:55,profit:30},
+};
+const TERM_DEFS=[
+ ['deposit','มัดจำก่อนเริ่มงาน',true],
+ ['revisions','รอบแก้ไขและค่าแก้เพิ่ม',true],
+ ['scope','ขอบเขตงานและการเพิ่มงาน (Scope creep)',true],
+ ['timeline','ระยะเวลาและการนับวันส่งงาน',true],
+ ['rights','สิทธิ์การใช้งาน / ลิขสิทธิ์',true],
+ ['files','ไฟล์ที่ส่งมอบและไฟล์ต้นฉบับ',true],
+ ['payment','การชำระเงินและใบเสนอราคาหมดอายุ',true],
+ ['tax','ภาษี (หัก ณ ที่จ่าย / VAT)',true],
+ ['cancel','การยกเลิกงานกลางคัน',true],
+ ['credit','การใส่เครดิต / ลงพอร์ตโฟลิโอ',true],
+ ['assets','ลูกค้าเป็นผู้จัดหาข้อมูล/รูป/โลโก้',true],
+ ['rush','งานด่วนและงานนอกเวลา',false],
+];
+
+// ---------- State
+const DEFAULT=()=>({
+ income:25000,fixed:5000,days:22,hoursDay:8,billable:60,profit:20,
+ items:[],cat:'all',
+ complexity:1,rush:0,rights:0.15,client:'person',revisions:2,revPct:15,concepts:0,source:false,credit:true,
+ direct:[],directMarkup:10,
+ wht:false,grossUp:true,vat:false,platform:false,platformFee:17,roundStep:100,deposit:50,
+ terms:Object.fromEntries(TERM_DEFS.map(t=>[t[0],t[2]])),
+});
+let S=DEFAULT();
+try{const saved=localStorage.getItem('rateboard.v1');if(saved){S=Object.assign(DEFAULT(),JSON.parse(saved));S.terms=Object.assign(DEFAULT().terms,S.terms||{});}}catch(e){}
+const save=()=>{try{localStorage.setItem('rateboard.v1',JSON.stringify(S));}catch(e){}};
+
+// ---------- Calculations
+function calcRate(){
+ const hours=S.days*S.hoursDay;
+ const bill=hours*S.billable/100;
+ const need=S.income+S.fixed;
+ const base=bill>0?need/bill:0;
+ const rate=base*(1+S.profit/100);
+ return {hours,bill,base,rate,day:rate*S.hoursDay};
+}
+function itemUnitPrice(it,rate){
+ if(it.override!=null) return it.override;
+ return it.hours*rate;
+}
+function calcAll(){
+ const R=calcRate();
+ let labor=0,hoursTotal=0,mLo=0,mMid=0,mHi=0;
+ S.items.forEach(it=>{const u=itemUnitPrice(it,R.rate);labor+=u*it.qty;hoursTotal+=it.hours*it.qty;const c=CAT_MAP[it.id];mLo+=c.lo*it.qty;mMid+=c.mid*it.qty;mHi+=c.hi*it.qty;});
+ const mult=S.complexity*(1+S.rush)*(1+S.rights)*(1+S.concepts)*(1+(S.source?0.2:0))*(1+(S.credit?0:0.1));
+ const laborAdj=labor*mult;
+ const directRaw=S.direct.reduce((a,d)=>a+(+d.amount||0),0);
+ const direct=directRaw*(1+S.directMarkup/100);
+ let subtotal=laborAdj+direct;
+ // platform fee: need net = subtotal → gross = subtotal/(1-fee)
+ const feeRate=S.platform?clamp(S.platformFee,0,90)/100:0;
+ let priceBeforeTax=feeRate>0?subtotal/(1-feeRate):subtotal;
+ // WHT gross-up
+ const whtRate=S.wht?0.03:0;
+ if(S.wht&&S.grossUp) priceBeforeTax=priceBeforeTax/(1-whtRate);
+ // rounding
+ const step=+S.roundStep||1;
+ priceBeforeTax=Math.ceil(priceBeforeTax/step)*step;
+ const vat=S.vat?priceBeforeTax*0.07:0;
+ const total=priceBeforeTax+vat;
+ const whtAmt=priceBeforeTax*whtRate;
+ const platformAmt=priceBeforeTax*feeRate;
+ const cashIn=total-whtAmt-platformAmt; // what lands in account (VAT is pass-through)
+ const netAfterVat=cashIn-vat;
+ const received=netAfterVat; // net revenue after platform, wht, and VAT remittance
+ const profit=received-directRaw; // money left for labor
+ const effRate=hoursTotal>0?profit/hoursTotal:0;
+ const workDays=hoursTotal>0?Math.ceil(hoursTotal/(S.hoursDay*S.billable/100)):0;
+ return {R,labor,laborAdj,mult,direct,directRaw,subtotal,priceBeforeTax,vat,total,whtAmt,platformAmt,cashIn,received,profit,effRate,hoursTotal,workDays,mLo,mMid,mHi};
+}
+
+// ---------- Rendering
+function renderRate(){
+ ['income','fixed','days','hoursDay','billable','profit'].forEach(k=>{if(document.activeElement!==$(k))$(k).value=S[k];});
+ const R=calcRate();
+ $('rHours').textContent=fmt(R.hours);
+ $('rBillable').textContent=fmt1(R.bill);
+ $('rBase').textContent='฿'+fmt(R.base);
+ $('rRate').textContent='฿'+fmt(R.rate);
+ $('rDay').textContent='฿'+fmt(R.day);
+ document.querySelectorAll('[data-preset]').forEach(b=>{const p=PRESETS[b.dataset.preset];b.classList.toggle('on',Object.keys(p).every(k=>+S[k]===p[k]));});
+}
+function renderCatalog(){
+ const cats=$('cats');cats.innerHTML='';
+ [['all','ทั้งหมด'],...Object.entries(CATS)].forEach(([k,v])=>{const b=document.createElement('button');b.className='cat'+(S.cat===k?' on':'');b.textContent=v;b.onclick=()=>{S.cat=k;save();renderCatalog();};cats.appendChild(b);});
+ const box=$('catalog');box.innerHTML='';
+ CATALOG.filter(c=>S.cat==='all'||c[1]===S.cat).forEach(c=>{
+  const b=document.createElement('button');b.className='tile';b.type='button';
+  b.innerHTML=`<span class="n">${c[2]}</span><span class="m"><span>${c[3]}</span></span><span class="m"><span>~${c[4]} ชม.</span><b>ตลาด ฿${fmt(c[5])}–${fmt(c[7])}</b></span>`;
+  b.onclick=()=>addItem(c[0]);box.appendChild(b);
+ });
+}
+function addItem(id){
+ const ex=S.items.find(i=>i.id===id);
+ if(ex){ex.qty+=1;}else{const c=CAT_MAP[id];S.items.push({id,qty:1,hours:c.hours,override:null});}
+ save();renderItems();renderSummary();toast('เพิ่ม "'+CAT_MAP[id].name+'" แล้ว');
+}
+function renderItems(){
+ const w=$('itemsWrap');
+ if(!S.items.length){w.innerHTML='<div class="empty">ยังไม่มีงานในโปรเจกต์ — คลิกการ์ดด้านบนเพื่อเพิ่ม</div>';return;}
+ const R=calcRate();
+ let h='<div class="tbl-wrap"><table><thead><tr><th>งาน</th><th style="width:70px">จำนวน</th><th style="width:80px">ชม./ชิ้น</th><th style="width:120px">ราคา/ชิ้น</th><th class="right">รวม</th><th>เทียบตลาด (กลาง)</th><th></th></tr></thead><tbody>';
+ S.items.forEach((it,i)=>{
+  const c=CAT_MAP[it.id];const u=itemUnitPrice(it,R.rate);const tot=u*it.qty;
+  const ratio=u/c.mid;const cls=ratio<0.75?'lo':ratio>1.6?'hi':'ok';
+  const lbl=ratio<0.75?'ต่ำกว่าตลาด':ratio>1.6?'สูงกว่าตลาด':'ในช่วงตลาด';
+  h+=`<tr data-i="${i}">
+   <td><div class="item-name">${c.name}</div><div class="item-sub">${c.unit} · ตลาด ฿${fmt(c.lo)} / <b>${fmt(c.mid)}</b> / ${fmt(c.hi)}</div></td>
+   <td><div class="in"><input type="number" min="1" step="1" value="${it.qty}" data-f="qty"></div></td>
+   <td><div class="in"><input type="number" min="0.25" step="0.5" value="${it.hours}" data-f="hours"></div></td>
+   <td><div class="in"><input type="number" min="0" step="50" value="${Math.round(u)}" data-f="price" title="${it.override!=null?'กำหนดเอง — คลิก ↺ เพื่อกลับเป็นอัตโนมัติ':'อัตโนมัติ = ชั่วโมง × เรท'}" style="${it.override!=null?'border-color:var(--money)':''}"></div></td>
+   <td class="right num"><b>฿${fmt(tot)}</b></td>
+   <td><span class="mkt-pill ${cls}">${lbl} (${Math.round(ratio*100)}%)</span><br><button class="btn ghost small" data-act="mkt" style="margin-top:4px">ใช้ราคาตลาด</button>${it.override!=null?'<button class="btn ghost small" data-act="auto" title="กลับเป็นอัตโนมัติ">↺</button>':''}</td>
+   <td><button class="btn ghost small danger" data-act="del" title="ลบ">✕</button></td></tr>`;
+ });
+ h+='</tbody></table></div>';w.innerHTML=h;
+ w.querySelectorAll('input[data-f]').forEach(inp=>{
+  inp.addEventListener('input',e=>{const tr=e.target.closest('tr');const it=S.items[+tr.dataset.i];const f=e.target.dataset.f;const v=parseFloat(e.target.value);
+   if(f==='qty'){it.qty=Math.max(1,Math.round(v||1));}
+   else if(f==='hours'){it.hours=Math.max(0.25,v||0.25);it.override=null;}
+   else if(f==='price'){it.override=isNaN(v)?null:Math.max(0,v);}
+   save();renderSummary();updateRowTotals();});
+  inp.addEventListener('change',()=>renderItems());
+ });
+ w.querySelectorAll('button[data-act]').forEach(b=>b.onclick=e=>{const tr=e.target.closest('tr');const i=+tr.dataset.i;const it=S.items[i];const a=e.target.dataset.act;
+  if(a==='del')S.items.splice(i,1);else if(a==='mkt')it.override=CAT_MAP[it.id].mid;else if(a==='auto')it.override=null;
+  save();renderItems();renderSummary();});
+}
+function updateRowTotals(){const R=calcRate();document.querySelectorAll('#itemsWrap tr[data-i]').forEach(tr=>{const it=S.items[+tr.dataset.i];const u=itemUnitPrice(it,R.rate);tr.querySelector('td.right b').textContent='฿'+fmt(u*it.qty);});}
+function renderCond(){
+ $('complexity').value=S.complexity;$('rush').value=S.rush;$('rights').value=S.rights;$('client').value=S.client;$('concepts').value=S.concepts;
+ if(document.activeElement!==$('revisions'))$('revisions').value=S.revisions;
+ if(document.activeElement!==$('revPct'))$('revPct').value=S.revPct;
+ $('source').checked=S.source;$('credit').checked=S.credit;
+}
+function renderDirect(){
+ const w=$('directRows');
+ if(!S.direct.length){w.innerHTML='<div class="empty">ไม่มีต้นทุนตรง — ถ้าไม่ต้องซื้ออะไรเพิ่ม ข้ามได้</div>';return;}
+ let h='<div class="tbl-wrap"><table><thead><tr><th>รายการ</th><th style="width:150px">จำนวนเงิน (บาท)</th><th></th></tr></thead><tbody>';
+ S.direct.forEach((d,i)=>{h+=`<tr data-i="${i}"><td><div class="in"><input type="text" value="${esc(d.name)}" data-f="name" placeholder="เช่น ภาพสต็อก"></div></td><td><div class="in"><input type="number" min="0" step="50" value="${d.amount}" data-f="amount"></div></td><td><button class="btn ghost small danger" data-act="del">✕</button></td></tr>`;});
+ h+='</tbody></table></div>';w.innerHTML=h;
+ w.querySelectorAll('input[data-f]').forEach(inp=>inp.addEventListener('input',e=>{const i=+e.target.closest('tr').dataset.i;const f=e.target.dataset.f;S.direct[i][f]=f==='amount'?(parseFloat(e.target.value)||0):e.target.value;save();renderSummary();}));
+ w.querySelectorAll('button[data-act=del]').forEach(b=>b.onclick=e=>{S.direct.splice(+e.target.closest('tr').dataset.i,1);save();renderDirect();renderSummary();});
+}
+function renderTax(){
+ $('wht').checked=S.wht;$('grossUp').checked=S.grossUp;$('vat').checked=S.vat;$('platform').checked=S.platform;
+ if(document.activeElement!==$('platformFee'))$('platformFee').value=S.platformFee;
+ $('roundStep').value=S.roundStep;
+ if(document.activeElement!==$('deposit'))$('deposit').value=S.deposit;
+ $('grossRow').style.opacity=S.wht?1:.45;
+ $('platformFee').disabled=!S.platform;
+}
+function renderRef(){
+ let h='<thead><tr><th>งาน</th><th>หน่วย</th><th class="right">ชม.ประเมิน</th><th class="right">ต่ำ</th><th class="right">กลาง</th><th class="right">สูง</th><th class="right">ราคาเรทเรา</th></tr></thead><tbody>';
+ const R=calcRate();let lastCat='';
+ CATALOG.forEach(c=>{if(c[1]!==lastCat){lastCat=c[1];h+=`<tr><td colspan="7" style="background:var(--surface2);font-weight:700;font-size:12.5px;color:var(--ink2)">${CATS[c[1]]}</td></tr>`;}
+  const mine=c[4]*R.rate;const cls=mine<c[5]*0.9?'lo':mine>c[7]*1.1?'hi':'ok';
+  h+=`<tr><td>${c[2]}</td><td class="muted">${c[8]}</td><td class="right num">${c[4]}</td><td class="right num">฿${fmt(c[5])}</td><td class="right num"><b>฿${fmt(c[6])}</b></td><td class="right num">฿${fmt(c[7])}</td><td class="right num"><span class="mkt-pill ${cls}">฿${fmt(mine)}</span></td></tr>`;});
+ h+='</tbody>';$('refTable').innerHTML=h;
+}
+function renderTermsChecks(){
+ const w=$('termChecks');w.innerHTML='';
+ TERM_DEFS.forEach(([k,label])=>{const l=document.createElement('label');l.className='ck';l.innerHTML=`<input type="checkbox" ${S.terms[k]?'checked':''}> <span>${label}</span>`;l.querySelector('input').onchange=e=>{S.terms[k]=e.target.checked;save();renderTerms();};w.appendChild(l);});
+}
+function clientLabel(){return {person:'ลูกค้า',sme:'ลูกค้า',company:'บริษัทลูกค้า',agency:'ลูกค้า'}[S.client];}
+function rightsLabel(){return {0:'ใช้ส่วนตัว / ไม่แสวงหากำไร',0.15:'ใช้เชิงพาณิชย์สำหรับธุรกิจ/ทีมของลูกค้า',0.4:'ใช้เชิงพาณิชย์ในนามบริษัท/แบรนด์/ทีมอาชีพ ทุกช่องทาง',1:'ซื้อขาดลิขสิทธิ์ (Exclusive) ผู้รับจ้างไม่นำแบบไปใช้ซ้ำ'}[S.rights];}
+function buildTerms(C){
+ const t=[];const c=clientLabel();
+ const rushOn=S.rush>0;
+ if(S.terms.deposit&&S.deposit>0)t.push(`• การชำระเงิน: มัดจำ ${S.deposit}% (฿${fmt(C.total*S.deposit/100)}) ก่อนเริ่มงาน ส่วนที่เหลือ ${100-S.deposit}% ชำระก่อนส่งไฟล์ความละเอียดสูง/ไฟล์สุดท้าย (ระหว่างตรวจงานจะส่งไฟล์ตัวอย่างพร้อมลายน้ำ/ความละเอียดต่ำ)`);
+ if(S.terms.revisions)t.push(`• การแก้ไข: รวมการแก้ไข ${S.revisions} รอบ (แก้ไขจากแบบที่เลือกแล้ว เช่น สี ข้อความ ตำแหน่ง) การแก้ไขรอบถัดไปคิดเพิ่มรอบละ ${S.revPct}% ของค่างานชิ้นนั้น การเปลี่ยนคอนเซ็ปต์/บรีฟใหม่หลังอนุมัติแบบร่างถือเป็นงานใหม่`);
+ if(S.terms.scope)t.push(`• ขอบเขตงาน: ราคานี้ครอบคลุมเฉพาะรายการที่ระบุในใบเสนอราคา งานเพิ่มเติม (ไซส์เพิ่ม, เวอร์ชันเพิ่ม, ภาษาเพิ่ม, แพลตฟอร์มเพิ่ม) จะเสนอราคาแยกก่อนดำเนินการ`);
+ if(S.terms.timeline)t.push(`• ระยะเวลา: ประมาณ ${C.workDays||'—'} วันทำการ นับจากวันที่ได้รับมัดจำและข้อมูลครบถ้วน (บรีฟ ข้อความ โลโก้ รูป ฟอนต์) วันตรวจงาน/รอคำตอบของ${c}ไม่นับรวม หาก${c}ตอบกลับช้ากว่า 3 วันทำการ กำหนดส่งจะเลื่อนตามจริง`);
+ if(S.terms.rights)t.push(`• ลิขสิทธิ์และสิทธิ์การใช้งาน: ${rightsLabel()} สิทธิ์จะโอนให้${c}เมื่อชำระเงินครบถ้วน แบบร่างที่ไม่ได้เลือกยังเป็นของผู้ออกแบบ${S.rights<1?' ผู้ออกแบบสงวนสิทธิ์ห้ามนำไฟล์ไปขายต่อหรือให้บุคคลที่สามใช้':''}`);
+ if(S.terms.files)t.push(`• ไฟล์ส่งมอบ: ไฟล์พร้อมใช้ (${S.items.some(i=>CAT_MAP[i.id].cat==='motion')?'MP4 / MOV ตามสเปคที่ตกลง, ':''}PNG / JPG / PDF ความละเอียดสูง${S.items.some(i=>CAT_MAP[i.id].cat==='logo')?', ไฟล์เวกเตอร์ SVG/PDF สำหรับโลโก้':''}) ${S.source?'รวมไฟล์ต้นฉบับ (.ai/.psd/.aep) ตามที่ตกลง':'ไม่รวมไฟล์ต้นฉบับ (.ai/.psd/.aep) — หากต้องการคิดเพิ่ม 20% ของค่างาน'} ส่งผ่าน Google Drive และเก็บไฟล์ให้ 90 วันหลังส่งงาน`);
+ if(S.terms.payment)t.push(`• ใบเสนอราคานี้มีอายุ 15 วัน ชำระผ่านโอนเงินธนาคาร/พร้อมเพย์ ${S.client==='company'?'ออกใบแจ้งหนี้/ใบเสร็จรับเงินให้ตามที่ร้องขอ':'ออกใบเสร็จรับเงินให้เมื่อชำระครบ'}`);
+ if(S.terms.tax){let s='• ภาษี: ';if(S.vat)s+='ราคารวมภาษีมูลค่าเพิ่ม 7% แล้ว ';else s+='ผู้รับจ้างไม่ได้จดทะเบียนภาษีมูลค่าเพิ่ม ราคานี้จึงไม่มี VAT ';if(S.wht)s+=S.grossUp?`ราคานี้ยังไม่รวมภาษีหัก ณ ที่จ่าย 3% — หาก${c}หักภาษี ณ ที่จ่าย กรุณาออกหนังสือรับรองการหักภาษี (50 ทวิ) ให้ผู้รับจ้างทุกครั้ง`:`หาก${c}เป็นนิติบุคคล สามารถหักภาษี ณ ที่จ่าย 3% ได้ กรุณาออกหนังสือรับรอง (50 ทวิ) ให้ผู้รับจ้าง`;t.push(s);}
+ if(S.terms.cancel)t.push(`• การยกเลิก: หากยกเลิกหลังเริ่มงาน มัดจำไม่คืน หากยกเลิกหลังส่งแบบร่างแรกคิดค่างานตามส่วนที่ทำแล้ว (ขั้นต่ำ 50%) หากยกเลิกหลังอนุมัติแบบร่างคิดค่างานเต็มจำนวน`);
+ if(S.terms.credit)t.push(S.credit?`• เครดิตผลงาน: ผู้ออกแบบสามารถนำผลงานไปแสดงในพอร์ตโฟลิโอ/โซเชียลได้หลังจากงานเผยแพร่แล้ว หากเป็นความลับก่อนเปิดตัวจะไม่เผยแพร่ก่อนได้รับอนุญาต`:`• เครดิตผลงาน: ${c}ขอไม่ให้เผยแพร่ผลงาน (คิดรวมในราคาแล้ว +10%)`);
+ if(S.terms.assets)t.push(`• ข้อมูลจาก${c}: ${c}เป็นผู้จัดหาข้อความ โลโก้ รูปสินค้า และรับรองว่ามีสิทธิ์ใช้งาน ผู้ออกแบบไม่รับผิดชอบการละเมิดลิขสิทธิ์จากวัสดุที่${c}จัดหา ภาพ/ฟอนต์/เพลงลิขสิทธิ์ที่ต้องซื้อเพิ่มจะแจ้งราคาให้ทราบก่อน`);
+ if(S.terms.rush)t.push(`• งานด่วน: ${rushOn?`ราคานี้รวมค่าเร่งงาน +${Math.round(S.rush*100)}% แล้ว `:''}งานที่ต้องการภายใน 48 ชม. หรือทำในวันหยุด/นอกเวลา 20:00–09:00 คิดค่าเร่งงาน 30–100% ตามความเร่งด่วน`);
+ return t.join('\n\n');
+}
+function renderTerms(){const C=calcAll();$('termsText').value=buildTerms(C);}
+function renderSummary(){
+ const C=calcAll();
+ $('sTotal').textContent=fmt(C.total);
+ $('sTotalSub').textContent=(S.vat?'รวม VAT 7% แล้ว':'ไม่มี VAT (ไม่ได้จดทะเบียน)')+(S.wht?(S.grossUp?' · ยังไม่รวมหัก ณ ที่จ่าย 3%':' · ลูกค้าจะหัก 3%'):'');
+ const L=[];
+ const line=(k,v,cls='')=>L.push(`<div class="line ${cls}"><span class="k">${k}</span><span class="v num">${v}</span></div>`);
+ line('ค่าแรง (ชั่วโมง × เรท)',`฿${fmt(C.labor)}`);
+ if(Math.abs(C.mult-1)>0.001)line(`× ตัวคูณเงื่อนไข (${C.mult.toFixed(2)})`,`฿${fmt(C.laborAdj)}`);
+ if(C.direct>0)line(`ต้นทุนตรง +${S.directMarkup}%`,`฿${fmt(C.direct)}`);
+ if(C.platformAmt>0)line(`ค่าธรรมเนียมแพลตฟอร์ม ${S.platformFee}%`,`+฿${fmt(C.platformAmt)}`);
+ if(S.wht&&S.grossUp)line('ชดเชยหัก ณ ที่จ่าย 3%',`+฿${fmt(C.priceBeforeTax*0.03)}`);
+ line('ราคาก่อน VAT (ปัดแล้ว)',`฿${fmt(C.priceBeforeTax)}`,'tot');
+ if(S.vat)line('VAT 7%',`+฿${fmt(C.vat)}`);
+ line('ยอดในใบเสนอราคา',`฿${fmt(C.total)}`,'tot');
+ if(S.wht)line('ลูกค้าหัก ณ ที่จ่าย 3%',`−฿${fmt(C.whtAmt)}`,'neg');
+ if(C.platformAmt>0)line('แพลตฟอร์มหักค่าธรรมเนียม',`−฿${fmt(C.platformAmt)}`,'neg');
+ if(S.vat)line('VAT ต้องนำส่งสรรพากร',`−฿${fmt(C.vat)}`,'neg');
+ line('เงินที่ได้รับจริง',`฿${fmt(C.received)}`,'tot pos');
+ if(C.directRaw>0)line('หักต้นทุนตรงที่จ่ายจริง',`−฿${fmt(C.directRaw)}`,'neg');
+ line('เหลือเป็นค่าแรง+กำไร',`฿${fmt(C.profit)}`,'tot');
+ $('sLines').innerHTML=L.join('');
+ // gauge
+ const has=S.items.length>0;
+ $('gLo').textContent=has?'ต่ำ ฿'+fmt(C.mLo):'—';$('gMid').textContent=has?'กลาง ฿'+fmt(C.mMid):'—';$('gHi').textContent=has?'สูง ฿'+fmt(C.mHi):'—';
+ const v=$('verdict');
+ if(!has){$('gMk').style.left='50%';v.className='verdict na';v.textContent='เพิ่มงานในโปรเจกต์เพื่อเทียบราคา';}
+ else{
+  const p=C.laborAdj; // compare labor (excl. direct/tax) to market
+  let pos;
+  if(p<=C.mLo)pos=Math.max(0,(p/C.mLo)*0.15);
+  else if(p<=C.mMid)pos=0.15+((p-C.mLo)/(C.mMid-C.mLo))*0.35;
+  else if(p<=C.mHi)pos=0.5+((p-C.mMid)/(C.mHi-C.mMid))*0.35;
+  else pos=Math.min(1,0.85+((p-C.mHi)/C.mHi)*0.15);
+  $('gMk').style.left=(pos*100).toFixed(1)+'%';
+  const r=p/C.mMid;
+  if(p<C.mLo*0.9){v.className='verdict lo';v.innerHTML=`<b>ต่ำกว่าตลาด</b> — ค่าแรงของคุณ (฿${fmt(p)}) ต่ำกว่าราคาต่ำสุดที่พบบน Fastwork ลูกค้าอาจมองว่าไม่มืออาชีพ และคุณจะเหนื่อยเกินคุ้ม ลองเพิ่มชั่วโมงประเมินให้ตรงจริง หรือกด "ใช้ราคาตลาด"`;}
+  else if(r<0.85){v.className='verdict ok';v.innerHTML=`<b>ราคาคุ้มค่า</b> — อยู่ในช่วงต่ำ–กลางของตลาด (${Math.round(r*100)}% ของราคากลาง) เหมาะกับการสร้างพอร์ต/รีวิวช่วงแรก`;}
+  else if(r<=1.35){v.className='verdict ok';v.innerHTML=`<b>อยู่ในช่วงตลาด</b> — ใกล้ราคากลางของ Fastwork (${Math.round(r*100)}%) เสนอได้อย่างมั่นใจ`;}
+  else if(p<=C.mHi*1.1){v.className='verdict ok';v.innerHTML=`<b>ช่วงบนของตลาด</b> — ${Math.round(r*100)}% ของราคากลาง ต้องมีพอร์ต/รีวิว/สไตล์เฉพาะตัวรองรับ และควรอธิบายคุณค่าให้ชัดในใบเสนอราคา`;}
+  else{v.className='verdict hi';v.innerHTML=`<b>สูงกว่าตลาดมาก</b> — เกินราคาสูงสุดที่พบบน Fastwork ลูกค้าทั่วไปอาจต่อรองหนัก เหมาะกับลูกค้าองค์กร/งานพรีเมียม หรือลองลดตัวคูณเงื่อนไข`;}
+ }
+ // KPIs
+ $('kHours').textContent=fmt1(C.hoursTotal)+' ชม.';
+ $('kDays').textContent=C.workDays?`~${C.workDays} วันทำการ`:'—';
+ $('kEff').textContent=C.hoursTotal?`฿${fmt(C.effRate)}`:'—';
+ $('kDep').textContent=S.deposit>0?`฿${fmt(C.total*S.deposit/100)}`:'ไม่มี';
+ // warnings
+ const W=[];
+ if(C.hoursTotal>0&&C.effRate<C.R.base)W.push(`เรทจริงที่ได้ (฿${fmt(C.effRate)}/ชม.) ต่ำกว่าเรทฐานต้นทุน (฿${fmt(C.R.base)}/ชม.) — งานนี้ขาดทุนเมื่อเทียบเป้ารายได้`);
+ if(S.billable>=85)W.push('ชั่วโมงเก็บเงินได้ '+S.billable+'% สูงผิดปกติ — ฟรีแลนซ์ส่วนใหญ่อยู่ที่ 50–65% (ที่เหลือคือหางาน คุยงาน แก้ฟรี บัญชี)');
+ if(S.client==='company'&&!S.wht)W.push('ลูกค้าเป็นบริษัท — โดยปกติจะหักภาษี ณ ที่จ่าย 3% ควรเปิดตัวเลือกในข้อ 5');
+ if(S.vat&&S.platform)W.push('ขายผ่านแพลตฟอร์มพร้อมจด VAT — ตรวจสอบว่าแพลตฟอร์มออกใบกำกับให้ลูกค้าอย่างไร');
+ if(S.rush>=0.5&&C.workDays>3)W.push('งานด่วนแต่ชั่วโมงงานรวมมาก — ตรวจสอบว่าทำทันจริงก่อนรับ');
+ $('warns').innerHTML=W.map(w=>`<div class="warnbox">⚠ ${w}</div>`).join('');
+ renderTerms();
+ document.querySelectorAll('#itemsWrap .mkt-pill').length&&updateRowTotals();
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1800);}
+
+// ---------- Print quote
+function buildQuote(){
+ const C=calcAll();const R=C.R;const d=new Date();
+ const dateStr=d.toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+ let rows='';
+ S.items.forEach(it=>{const c=CAT_MAP[it.id];const u=itemUnitPrice(it,R.rate)*C.mult;rows+=`<tr><td>${c.name}<br><small style="color:#555">${c.note}</small></td><td class="right">${it.qty} ${c.unit}</td><td class="right">฿${fmt(u)}</td><td class="right">฿${fmt(u*it.qty)}</td></tr>`;});
+ S.direct.forEach(dd=>{if(!(+dd.amount))return;const a=(+dd.amount)*(1+S.directMarkup/100);rows+=`<tr><td>${esc(dd.name)||'ต้นทุนเพิ่มเติม'}<br><small style="color:#555">ค่าใช้จ่ายภายนอก</small></td><td class="right">1</td><td class="right">฿${fmt(a)}</td><td class="right">฿${fmt(a)}</td></tr>`;});
+ const extras=C.priceBeforeTax-(C.laborAdj+C.direct);
+ if(extras>0.5)rows+=`<tr><td>ค่าดำเนินการ${S.platform?' / ค่าธรรมเนียมแพลตฟอร์ม':''}${S.wht&&S.grossUp?' / ชดเชยภาษีหัก ณ ที่จ่าย':''} และปัดเศษ</td><td class="right">—</td><td class="right">—</td><td class="right">฿${fmt(extras)}</td></tr>`;
+ const cond=[];cond.push(`ความซับซ้อน: ${$('complexity').selectedOptions[0].textContent.split(' (')[0]}`);if(S.rush>0)cond.push(`เร่งด่วน: ${$('rush').selectedOptions[0].textContent.split(' (')[0]}`);cond.push(`สิทธิ์: ${rightsLabel()}`);cond.push(`แก้ไข ${S.revisions} รอบ`);if(S.concepts>0)cond.push(`แบบร่าง ${S.concepts==0.15?2:3} แบบ`);
+ $('quote').innerHTML=`
+  <div class="q-head"><div><h1>ใบเสนอราคา / Quotation</h1><div>งานออกแบบกราฟิก · Motion · โลโก้</div></div><div style="text-align:right"><div>วันที่: ${dateStr}</div><div>ยืนราคาถึง: 15 วันนับจากวันที่เสนอ</div><div>เรียน: ____________________</div></div></div>
+  <table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left">รายการ</th><th class="right">จำนวน</th><th class="right">ราคา/หน่วย</th><th class="right">รวม</th></tr></thead><tbody>${rows}
+  <tr class="q-tot"><td colspan="3" class="right">ราคารวม${S.vat?'ก่อน VAT':''}</td><td class="right">฿${fmt(C.priceBeforeTax)}</td></tr>
+  ${S.vat?`<tr><td colspan="3" class="right">ภาษีมูลค่าเพิ่ม 7%</td><td class="right">฿${fmt(C.vat)}</td></tr>`:''}
+  <tr class="q-tot"><td colspan="3" class="right">ยอดรวมสุทธิ</td><td class="right">฿${fmt(C.total)}</td></tr>
+  ${S.wht?`<tr><td colspan="3" class="right">หัก ณ ที่จ่าย 3% (กรณีนิติบุคคล)</td><td class="right">−฿${fmt(C.whtAmt)}</td></tr><tr><td colspan="3" class="right">ยอดชำระหลังหัก ณ ที่จ่าย</td><td class="right">฿${fmt(C.total-C.whtAmt)}</td></tr>`:''}
+  </tbody></table>
+  <p style="margin-top:10px"><b>เงื่อนไขงาน:</b> ${cond.join(' · ')} · ระยะเวลา ~${C.workDays} วันทำการหลังรับมัดจำและข้อมูลครบ</p>
+  <div class="q-terms"><b>ข้อตกลงและเงื่อนไข</b>\n${$('termsText').value}</div>
+  <p style="margin-top:28px">ผู้เสนอราคา ____________________ &nbsp;&nbsp;&nbsp;&nbsp; ผู้อนุมัติ ____________________</p>`;
+}
+
+// ---------- Bind
+['income','fixed','days','hoursDay','billable','profit'].forEach(k=>$(k).addEventListener('input',e=>{S[k]=parseFloat(e.target.value)||0;save();renderRate();renderItems();renderSummary();renderRef();}));
+document.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{Object.assign(S,PRESETS[b.dataset.preset]);save();renderRate();renderItems();renderSummary();renderRef();});
+['complexity','rush','rights','concepts'].forEach(k=>$(k).addEventListener('change',e=>{S[k]=parseFloat(e.target.value);save();renderSummary();}));
+$('client').addEventListener('change',e=>{S.client=e.target.value;if(S.client==='company'&&!S.wht){S.wht=true;renderTax();toast('เปิด "หัก ณ ที่จ่าย 3%" ให้อัตโนมัติสำหรับลูกค้าบริษัท');}save();renderSummary();});
+['revisions','revPct'].forEach(k=>$(k).addEventListener('input',e=>{S[k]=parseFloat(e.target.value)||0;save();renderTerms();}));
+['source','credit'].forEach(k=>$(k).addEventListener('change',e=>{S[k]=e.target.checked;save();renderSummary();}));
+$('addDirect').onclick=()=>{S.direct.push({name:'',amount:0});save();renderDirect();const last=document.querySelector('#directRows tr:last-child input[data-f=name]');last&&last.focus();};
+document.querySelectorAll('[data-quick]').forEach(b=>b.onclick=()=>{const [n,a]=b.dataset.quick.split('|');S.direct.push({name:n,amount:+a});save();renderDirect();renderSummary();});
+$('directMarkup').addEventListener('input',e=>{S.directMarkup=parseFloat(e.target.value)||0;save();renderSummary();});
+['wht','grossUp','vat','platform'].forEach(k=>$(k).addEventListener('change',e=>{S[k]=e.target.checked;save();renderTax();renderSummary();}));
+$('platformFee').addEventListener('input',e=>{S.platformFee=parseFloat(e.target.value)||0;save();renderSummary();});
+$('roundStep').addEventListener('change',e=>{S.roundStep=+e.target.value;save();renderSummary();});
+$('deposit').addEventListener('input',e=>{S.deposit=parseFloat(e.target.value)||0;save();renderSummary();});
+$('copyTerms').onclick=async()=>{try{await navigator.clipboard.writeText($('termsText').value);toast('คัดลอกเงื่อนไขแล้ว');}catch(e){$('termsText').select();document.execCommand('copy');toast('คัดลอกแล้ว');}};
+$('btnPrint').onclick=()=>{if(!S.items.length){toast('เพิ่มงานในโปรเจกต์ก่อนพิมพ์ใบเสนอราคา');return;}buildQuote();window.print();};
+$('btnReset').onclick=()=>{if(confirm('ล้างค่าทั้งหมดและกลับเป็นค่าเริ่มต้น?')){S=DEFAULT();save();renderAll();toast('รีเซ็ตแล้ว');}};
+
+function renderAll(){renderRate();renderCatalog();renderItems();renderCond();renderDirect();renderTax();renderRef();renderTermsChecks();renderSummary();}
+renderAll();
+})();
+</script>
