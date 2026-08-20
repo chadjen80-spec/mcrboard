@@ -1,0 +1,174 @@
+// MSW Project Hub — schema
+// Local dev: SQLite (zero setup). Production: change provider to "postgresql" + DATABASE_URL.
+// JSON-ish payloads are TEXT columns named *Json (portable across providers) — see src/lib/json.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── Enums ─────────────────────────
+
+enum MemberRole {
+  LEAD       // หัวหน้าโปรเจค / Producer
+  PLANNER    // Game design / วางแผน
+  SCRIPTER   // mLua / logic
+  ARTIST     // Sprite / pixel art / VFX
+  UI         // UI / UX (.ui)
+  LEVEL      // Map / level design
+  SOUND      // Sound / music
+  QA         // Tester
+  OTHER
+}
+
+enum TaskType {
+  SCRIPT     // .mlua logic / component
+  MODEL      // .model / entity
+  UI         // .ui screens
+  MAP        // .map / level
+  ART        // sprite / animation
+  SOUND      // sfx / bgm
+  DESIGN     // game design / GDD / balance
+  QA         // test / bug
+  DOCS       // docs / release notes
+  OTHER
+}
+
+enum TaskStatus {
+  BACKLOG
+  TODO
+  DOING
+  REVIEW
+  DONE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MilestoneStatus {
+  PLANNED
+  ACTIVE
+  DONE
+}
+
+enum EventKind {
+  MEETING
+  PLAYTEST
+  RELEASE
+  DEADLINE
+  OTHER
+}
+
+// ───────────────────────── Models ─────────────────────────
+
+model Member {
+  id        String     @id @default(cuid())
+  name      String
+  role      MemberRole @default(OTHER)
+  color     String     @default("#6366f1") // avatar / calendar colour
+  discordId String?    // Discord user id — used to @mention in assignment notifications
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+
+  tasks      Task[]     @relation("assignee")
+  created    Task[]     @relation("creator")
+  comments   Comment[]
+  activities Activity[]
+}
+
+model Milestone {
+  id          String          @id @default(cuid())
+  name        String          // e.g. "M7 · Duel Room"
+  description String?
+  status      MilestoneStatus @default(PLANNED)
+  color       String          @default("#0ea5e9")
+  startDate   DateTime?
+  endDate     DateTime?
+  order       Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  tasks  Task[]
+  events Event[]
+}
+
+model Task {
+  id            String     @id @default(cuid())
+  title         String
+  description   String?
+  type          TaskType   @default(OTHER)
+  status        TaskStatus @default(TODO)
+  priority      Priority   @default(MEDIUM)
+  assigneeId    String?
+  assignee      Member?    @relation("assignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  creatorId     String?
+  creator       Member?    @relation("creator", fields: [creatorId], references: [id], onDelete: SetNull)
+  milestoneId   String?
+  milestone     Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  startDate     DateTime?
+  dueDate       DateTime?
+  estimateHours Float?
+  tagsJson      String     @default("[]") // string[]
+  checklistJson String     @default("[]") // {id,text,done}[]
+  filesJson     String     @default("[]") // string[] — related workspace paths e.g. RootDesk/MyDesk/Foo.mlua
+  order         Int        @default(0)    // order within a status column
+  completedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  comments Comment[]
+
+  @@index([status, order])
+  @@index([assigneeId])
+  @@index([milestoneId])
+  @@index([dueDate])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    Member?  @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model Event {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  kind        EventKind  @default(MEETING)
+  startAt     DateTime
+  endAt       DateTime?
+  allDay      Boolean    @default(false)
+  milestoneId String?
+  milestone   Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([startAt])
+}
+
+model Activity {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      Member?  @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String   // task.create | task.move | task.update | task.delete | event.create | milestone.update ...
+  entityType String   // task | event | milestone | member
+  entityId   String
+  summary    String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
