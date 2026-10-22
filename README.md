@@ -107,3 +107,4 @@ prisma/schema.prisma                Member · Milestone · Task · Comment · Ev
 2. query ใน `src/server/queries/`, action ใน `src/server/actions/` (ห่อด้วย `safeAction`, เรียก `logActivity`, `revalidatePath`)
 3. หน้าใหม่ใน `src/app/(app)/<route>/page.tsx` + เพิ่มเมนูใน `src/components/layout/nav.ts`
 4. `npm run typecheck && npm run lint`
+"# MapleFloatliteThailand" 
